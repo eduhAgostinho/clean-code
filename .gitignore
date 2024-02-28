@@ -23,8 +23,11 @@
 hs_err_pid*
 replay_pid*
 
+out/
 .run/
 bin/
 
 # JetBrains IDE
 .idea/
+
+src/
