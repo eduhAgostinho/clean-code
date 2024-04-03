@@ -25,14 +25,14 @@ public class ArgsTest {
     @Test
     public void testWithNoSchemaButWithOneArgument() throws Exception {
         Args args = new Args("", new String[]{"-x"});
-        assertEquals(false, args.isValid());
+        assertFalse(args.isValid());
         assertEquals("Argument(s) -x unexpected.", args.errorMessage());
     }
 
     @Test
     public void testWithNoSchemaButWithMultipleArguments() throws Exception {
         Args args = new Args("", new String[]{"-x", "-y"});
-        assertEquals(false, args.isValid());
+        assertFalse(args.isValid());
         assertEquals("Argument(s) -xy unexpected.", args.errorMessage());
     }
 
@@ -56,20 +56,20 @@ public class ArgsTest {
     public void testSimpleBooleanTruePresent() throws Exception {
         Args args = new Args("x", new String[]{"-x", "true"});
         assertEquals(1, args.cardinality());
-        assertEquals(true, args.getBoolean('x'));
+        assertTrue(args.getBoolean('x'));
     }
 
     @Test
     public void testSimpleBooleanFalsePresent() throws Exception {
         Args args = new Args("x", new String[]{"-x", "false"});
         assertEquals(1, args.cardinality());
-        assertEquals(false, args.getBoolean('x'));
+        assertFalse(args.getBoolean('x'));
     }
 
     @Test
     public void testMissingBooleanArgument() throws Exception {
         Args args = new Args("x", new String[]{"-x"});
-        assertEquals(false, args.isValid());
+        assertFalse(args.isValid());
     }
 
     @Test
@@ -83,8 +83,8 @@ public class ArgsTest {
     public void testMultipleBooleans() throws Exception {
         Args args = new Args("x,y", new String[]{"-xy", "true", "true"});
         assertEquals(2, args.cardinality());
-        assertEquals(true, args.getBoolean('x'));
-        assertEquals(true, args.getBoolean('y'));
+        assertTrue(args.getBoolean('x'));
+        assertTrue(args.getBoolean('y'));
     }
 
     @Test
@@ -93,8 +93,8 @@ public class ArgsTest {
         assertEquals(2, args.cardinality());
         assertTrue(args.has('x'));
         assertTrue(args.has('y'));
-        assertEquals(true, args.getBoolean('x'));
-        assertEquals(true, args.getBoolean('y'));
+        assertTrue(args.getBoolean('x'));
+        assertTrue(args.getBoolean('y'));
     }
 
     @Test
@@ -108,7 +108,7 @@ public class ArgsTest {
     @Test
     public void testMissingStringArgument() throws Exception {
         Args args = new Args("x*", new String[]{"-x"});
-        assertEquals(false, args.isValid());
+        assertFalse(args.isValid());
         assertEquals("Could not find string parameter for -x.",
                 args.errorMessage());
     }
@@ -124,7 +124,7 @@ public class ArgsTest {
     @Test
     public void testInvalidInteger() throws Exception {
         Args args = new Args("x#", new String[]{"-x", "Forty two"});
-        assertEquals(false, args.isValid());
+        assertFalse(args.isValid());
         assertEquals("Argument -x expects an integer but was 'Forty two'.",
                 args.errorMessage());
     }
@@ -132,7 +132,7 @@ public class ArgsTest {
     @Test
     public void testMissingInteger() throws Exception {
         Args args = new Args("x#", new String[]{"-x"});
-        assertEquals(false, args.isValid());
+        assertFalse(args.isValid());
         assertEquals("Could not find integer parameter for -x.",
                 args.errorMessage());
     }
