@@ -30,4 +30,6 @@ bin/
 # JetBrains IDE
 .idea/
 
-src/
+# Maven
+target/
+
