@@ -3,6 +3,7 @@ package cleancode;
 import cleancode.argselements.ArgSchemaElement;
 import cleancode.argselements.BooleanArg;
 import cleancode.argselements.IntegerArg;
+import cleancode.argselements.StringArg;
 import cleancode.errors.Error;
 import cleancode.errors.ErrorCode;
 import cleancode.errors.MissingArgError;
@@ -16,8 +17,6 @@ public class Args {
     private boolean valid = true;
     private final List<Error> errors = new ArrayList<>();
     private Set<Character> unexpectedArguments = new TreeSet<>();
-
-    private Map<Character, String> stringArgs = new HashMap<>();
 
     private Map<Character, ArgSchemaElement> argElements = new HashMap<>();
 
@@ -88,7 +87,7 @@ public class Args {
     }
 
     private void parseStringSchemaElement(char elementId) {
-        stringArgs.put(elementId, "");
+        argElements.put(elementId, new StringArg());
     }
 
     private boolean isStringSchemaElement(String elementTail) {
@@ -132,18 +131,14 @@ public class Args {
     }
 
     private boolean setArgument(char argChar) throws Exception {
-
-        if (isStringArg(argChar))
-            setStringArg(argChar);
-        else if (isIntArg(argChar) || isBooleanArg(argChar))
+        if (containsTheArgument(argChar)) {
             setArg(argChar);
-        else
-            return false;
-
-        return true;
+            return true;
+        }
+        return false;
     }
 
-    private boolean isIntArg(char argChar) {
+    private boolean containsTheArgument(char argChar) {
         return argElements.containsKey(argChar);
     }
 
@@ -160,26 +155,6 @@ public class Args {
         } catch (ArrayIndexOutOfBoundsException e) {
             errors.add(new MissingArgError(argChar, typeArgument));
         }
-    }
-
-    private void setStringArg(char argChar) throws ArgsException {
-        currentArgument++;
-        try {
-            stringArgs.put(argChar, argsArgument[currentArgument]);
-        } catch (ArrayIndexOutOfBoundsException e) {
-            valid = false;
-            errorArgumentId = argChar;
-            errorCode = ErrorCode.MISSING_STRING;
-            throw new ArgsException();
-        }
-    }
-
-    private boolean isStringArg(char argChar) {
-        return stringArgs.containsKey(argChar);
-    }
-
-    private boolean isBooleanArg(char argChar) {
-        return argElements.containsKey(argChar);
     }
 
     public int cardinality() {
@@ -245,12 +220,8 @@ public class Args {
         return message.toString();
     }
 
-    private String blankIfNull(String s) {
-        return s == null ? "" : s;
-    }
-
     public String getString(char arg) {
-        return blankIfNull(stringArgs.get(arg));
+        return (String) argElements.get(arg).get();
     }
 
     public Integer getInt(char arg) {
