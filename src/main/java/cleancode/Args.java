@@ -1,6 +1,7 @@
 package cleancode;
 
 import cleancode.argselements.ArgSchemaElement;
+import cleancode.argselements.BooleanArg;
 import cleancode.argselements.IntegerArg;
 import cleancode.errors.Error;
 import cleancode.errors.ErrorCode;
@@ -16,7 +17,6 @@ public class Args {
     private final List<Error> errors = new ArrayList<>();
     private Set<Character> unexpectedArguments = new TreeSet<>();
 
-    private Map<Character, Boolean> booleanArgs = new HashMap<>();
     private Map<Character, String> stringArgs = new HashMap<>();
 
     private Map<Character, ArgSchemaElement> argElements = new HashMap<>();
@@ -80,7 +80,7 @@ public class Args {
     }
 
     private void parseBooleanSchemaElement(char elementId) {
-        booleanArgs.put(elementId, false);
+        argElements.put(elementId, new BooleanArg());
     }
 
     private void parseIntegerSchemaElement(char elementId) {
@@ -132,11 +132,10 @@ public class Args {
     }
 
     private boolean setArgument(char argChar) throws Exception {
-        if (isBooleanArg(argChar))
-            setBooleanArg(argChar);
-        else if (isStringArg(argChar))
+
+        if (isStringArg(argChar))
             setStringArg(argChar);
-        else if (isIntArg(argChar))
+        else if (isIntArg(argChar) || isBooleanArg(argChar))
             setArg(argChar);
         else
             return false;
@@ -144,11 +143,12 @@ public class Args {
         return true;
     }
 
-    private boolean isIntArg(char argChar) {return argElements.containsKey(argChar);}
+    private boolean isIntArg(char argChar) {
+        return argElements.containsKey(argChar);
+    }
 
     private void setArg(char argChar) throws Exception {
         currentArgument++;
-
         String typeArgument = "";
         try {
             var argElement = argElements.get(argChar);
@@ -178,20 +178,8 @@ public class Args {
         return stringArgs.containsKey(argChar);
     }
 
-    private void setBooleanArg(char argChar) throws ArgsException {
-        currentArgument++;
-        try {
-            booleanArgs.put(argChar, Boolean.parseBoolean(argsArgument[currentArgument]));
-        } catch (ArrayIndexOutOfBoundsException e) {
-            valid = false;
-            errorArgumentId = argChar;
-            errorCode = ErrorCode.MISSING_BOOLEAN;
-            throw new ArgsException();
-        }
-    }
-
     private boolean isBooleanArg(char argChar) {
-        return booleanArgs.containsKey(argChar);
+        return argElements.containsKey(argChar);
     }
 
     public int cardinality() {
@@ -257,10 +245,6 @@ public class Args {
         return message.toString();
     }
 
-    private boolean falseIfNull(Boolean b) {
-        return b != null && b;
-    }
-
     private String blankIfNull(String s) {
         return s == null ? "" : s;
     }
@@ -273,8 +257,8 @@ public class Args {
         return (Integer) argElements.get(arg).get();
     }
 
-    public boolean getBoolean(char arg) {
-        return falseIfNull(booleanArgs.get(arg));
+    public Boolean getBoolean(char arg) {
+        return (Boolean) argElements.get(arg).get();
     }
 
     public boolean has(char arg) {
