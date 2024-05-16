@@ -7,6 +7,7 @@ import cleancode.argselements.StringArg;
 import cleancode.errors.Error;
 import cleancode.errors.ErrorCode;
 import cleancode.errors.MissingArgError;
+import cleancode.errors.UnexpectedArgError;
 
 import java.text.ParseException;
 import java.util.*;
@@ -14,33 +15,24 @@ import java.util.*;
 public class Args {
     private String schema;
     private String[] argsArgument;
-    private boolean valid = true;
     private final List<Error> errors = new ArrayList<>();
-    private Set<Character> unexpectedArguments = new TreeSet<>();
 
     private Map<Character, ArgSchemaElement> argElements = new HashMap<>();
 
     private Set<Character> argsFound = new HashSet<>();
     private int currentArgument;
-    private char errorArgumentId = '\0';
-    private String errorParameter = "TILT";
-    private ErrorCode errorCode = ErrorCode.OK;
 
     public Args(String schema, String[] args) throws ParseException {
         this.schema = schema;
         this.argsArgument = args;
-        valid = parse();
+        parse();
     }
 
-    private boolean parse() throws ParseException {
+    private void parse() throws ParseException {
         if (schema.length() == 0 && argsArgument.length == 0)
-            return true;
+            return;
         parseSchema();
-        try {
-            parseArguments();
-        } catch (Exception e) {
-        }
-        return valid;
+        parseArguments();
     }
 
     private boolean parseSchema() throws ParseException {
@@ -102,47 +94,37 @@ public class Args {
         return elementTail.equals("#");
     }
 
-    private boolean parseArguments() throws Exception {
+    private void parseArguments() {
         for (currentArgument = 0; currentArgument < argsArgument.length; currentArgument++) {
             String arg = argsArgument[currentArgument];
             parseArgument(arg);
         }
-        return true;
     }
 
-    private void parseArgument(String arg) throws Exception {
+    private void parseArgument(String arg) {
         if (arg.startsWith("-"))
             parseElements(arg);
     }
 
-    private void parseElements(String arg) throws Exception {
+    private void parseElements(String arg) {
         for (int i = 1; i < arg.length(); i++)
             parseElement(arg.charAt(i));
     }
 
-    private void parseElement(char argChar) throws Exception {
-        if (setArgument(argChar))
-            argsFound.add(argChar);
-        else {
-            unexpectedArguments.add(argChar);
-            errorCode = ErrorCode.UNEXPECTED_ARGUMENT;
-            valid = false;
-        }
-    }
-
-    private boolean setArgument(char argChar) throws Exception {
+    private void parseElement(char argChar) {
         if (containsTheArgument(argChar)) {
             setArg(argChar);
-            return true;
+            argsFound.add(argChar);
+        } else {
+            errors.add(new UnexpectedArgError(argChar));
         }
-        return false;
     }
 
     private boolean containsTheArgument(char argChar) {
         return argElements.containsKey(argChar);
     }
 
-    private void setArg(char argChar) throws Exception {
+    private void setArg(char argChar) {
         currentArgument++;
         String typeArgument = "";
         try {
@@ -168,32 +150,32 @@ public class Args {
             return "";
     }
 
-    public String errorMessage() throws Exception {
-        if (!errors.isEmpty()) {
-            return errors.stream().findFirst().get().getMessage();
-        }
+    public String errorMessage() {
+        String errorMessage = errors.isEmpty() ? this.getErrorMessageFromArgElements() : this.getErrorMessage();
+        return errorMessage != null ? errorMessage : "";
+    }
 
-        var errorMessageFromArgElements = getErrorMessageFromArgElements();
-        if (errorMessageFromArgElements != null) {
-            return errorMessageFromArgElements;
+    private String getErrorMessage() {
+        var firstError = errors.stream().findFirst().get();
+        if (isUnexpectedArgumentError(firstError)) {
+            return getUnexpectedArgumentMessage();
         }
+        return firstError.getMessage();
+    }
 
-        switch (errorCode) {
-            case OK:
-                throw new Exception("TILT: Should not get here.");
-            case UNEXPECTED_ARGUMENT:
-                return unexpectedArgumentMessage();
-            case MISSING_STRING:
-                return String.format("Could not find string parameter for -%c.",
-                        errorArgumentId);
-            case INVALID_INTEGER:
-                return String.format("Argument -%c expects an integer but was '%s'.",
-                        errorArgumentId, errorParameter);
-            case MISSING_INTEGER:
-                return String.format("Could not find integer parameter for -%c.",
-                        errorArgumentId);
+    private boolean isUnexpectedArgumentError(Error error) {
+        return error.getCode().equals(ErrorCode.UNEXPECTED_ARGUMENT);
+    }
+
+    private String getUnexpectedArgumentMessage() {
+        StringBuilder message = new StringBuilder("Argument(s) -");
+        var unexpectedArgumentErrors = errors.stream().filter(this::isUnexpectedArgumentError).toList();
+        for (Error error : unexpectedArgumentErrors) {
+            message.append(error.getMessage());
         }
-        return "";
+        message.append(" unexpected.");
+
+        return message.toString();
     }
 
     private String getErrorMessageFromArgElements() {
@@ -208,16 +190,6 @@ public class Args {
             }
         }
         return null;
-    }
-
-    private String unexpectedArgumentMessage() {
-        StringBuffer message = new StringBuffer("Argument(s) -");
-        for (char c : unexpectedArguments) {
-            message.append(c);
-        }
-        message.append(" unexpected.");
-
-        return message.toString();
     }
 
     public String getString(char arg) {
@@ -237,7 +209,7 @@ public class Args {
     }
 
     public boolean isValid() {
-        return valid && errors.isEmpty() && argElements.values().stream().allMatch(ArgSchemaElement::isValid);
+        return errors.isEmpty() && argElements.values().stream().allMatch(ArgSchemaElement::isValid);
     }
 
 }
