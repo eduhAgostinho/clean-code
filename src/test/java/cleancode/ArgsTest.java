@@ -31,10 +31,18 @@ public class ArgsTest {
     }
 
     @Test
-    public void testWithNoSchemaButWithMultipleArguments() throws Exception {
+    public void testWithNoSchemaButWithMultipleArguments2() throws Exception {
         Args args = new Args("", new String[] { "-x", "-y" });
         assertFalse(args.isValid());
-        assertEquals("Argument(s) -xy unexpected.", args.errorMessage());
+        assertEquals("Argument(s) -x unexpected.", args.errorMessage());
+    }
+
+    @Test
+    public void testArgumentsSeparated() throws Exception {
+        Args args = new Args("x,y", new String[] { "-x", "True", "-y", "False" });
+        assertTrue(args.isValid());
+        assertTrue(args.getBoolean('x'));
+        assertFalse(args.getBoolean('y'));
     }
 
     @Test
@@ -46,11 +54,19 @@ public class ArgsTest {
     }
 
     @Test
-    public void testInvalidArgumentFormat() throws Exception {
+    public void testInvalidSchemaFormat() throws Exception {
         exception.expect(ParseException.class);
         exception.expectMessage("Argument: f has invalid format: ~.");
 
-        new Args("f~", new String[] {});
+        new Args("f~", new String[] { "f", "teste" });
+    }
+
+    @Test
+    public void testInvalidSchemaFormat2() throws Exception {
+        exception.expect(ParseException.class);
+        exception.expectMessage("Argument: f has invalid format: ~.");
+
+        new Args("x#,f~", new String[] { "-xf", "teste", "2.5" });
     }
 
     @Test
@@ -112,19 +128,11 @@ public class ArgsTest {
         assertFalse(args.isValid());
         assertEquals("Could not find string parameter for -x.",
                 args.errorMessage());
-        assertEquals("", args.getString('x'));
+        assertEquals("", args.getString('w'));
     }
 
     @Test
     public void testSimpleIntPresent() throws Exception {
-        Args args = new Args("x#", new String[] { "-x", "42" });
-        assertEquals(1, args.cardinality());
-        assertTrue(args.has('x'));
-        assertEquals((Integer) 42, args.getInt('x'));
-    }
-
-    @Test
-    public void testInvalidArgument() throws Exception {
         Args args = new Args("x#", new String[] { "-x", "42" });
         assertTrue(args.isValid());
         assertEquals(1, args.cardinality());
@@ -146,5 +154,56 @@ public class ArgsTest {
         assertFalse(args.isValid());
         assertEquals("Could not find integer parameter for -x.",
                 args.errorMessage());
+    }
+
+    @Test
+    public void testWithTwoIntegers() throws ParseException {
+        Args args = new Args("x#,y#", new String[] { "-xy", "16", "12" });
+        assertTrue(args.isValid());
+        assertEquals(2, args.cardinality());
+        assertTrue(args.has('x'));
+        assertTrue(args.has('y'));
+        assertEquals((Integer) 16, args.getInt('x'));
+        assertEquals((Integer) 12, args.getInt('y'));
+    }
+
+    @Test
+    public void testWithTwoIntegersWithDifferentOrderThanSchema() throws ParseException {
+        Args args = new Args("x#,y#", new String[] { "-yx", "12", "16" });
+        assertTrue(args.isValid());
+        assertEquals(2, args.cardinality());
+        assertTrue(args.has('x'));
+        assertTrue(args.has('y'));
+        assertEquals((Integer) 16, args.getInt('x'));
+        assertEquals((Integer) 12, args.getInt('y'));
+    }
+
+    @Test
+    public void testWithNoSchemaButWithMultipleArguments() throws Exception {
+        Args args = new Args("", new String[] { "-xy", "True", "True" });
+        assertFalse(args.isValid());
+        assertEquals("Argument(s) -xy unexpected.", args.errorMessage());
+    }
+
+    @Test
+    public void testWithNoSchemaAndNoArguments() throws Exception {
+        Args args = new Args("", new String[] { "" });
+        assertTrue(args.isValid());
+    }
+
+    @Test
+    public void testWithNoSchemaAndNoArguments2() throws Exception {
+        Args args = new Args("", new String[] { "-xy" });
+        assertFalse(args.isValid());
+        assertEquals("Argument(s) -xy unexpected.", args.errorMessage());
+    }
+
+    @Test
+    public void testWithExtraArgument() throws ParseException  {
+        Args args = new Args("x#", new String[] { "-x", "12", "16" });
+        assertTrue(args.isValid());
+        assertEquals(1, args.cardinality());
+        assertTrue(args.has('x'));
+        assertEquals((Integer) 12, args.getInt('x'));
     }
 }

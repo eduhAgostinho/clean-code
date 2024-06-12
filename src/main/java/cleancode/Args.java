@@ -4,16 +4,26 @@ import cleancode.argselements.ArgSchemaElement;
 import cleancode.argselements.BooleanArg;
 import cleancode.argselements.IntegerArg;
 import cleancode.argselements.StringArg;
+import cleancode.enums.ArgumentFormats;
 import cleancode.errors.Error;
 import cleancode.errors.ErrorCode;
 import cleancode.errors.MissingArgError;
 import cleancode.errors.UnexpectedArgError;
+import cleancode.exceptions.InvalidFormatArgumentException;
+import cleancode.exceptions.MissingArgumentException;
+import cleancode.exceptions.UnexpectedArgumentException;
+import cleancode.handlers.BooleanArgHandler;
+import cleancode.handlers.IntegerArgHandler;
+import cleancode.handlers.StringArgHandler;
 
 import java.text.ParseException;
 import java.util.*;
 
 public class Args {
     private String schema;
+    private String[] schemaArray;
+
+    private List<String> argsArgumentList;
     private String[] argsArgument;
     private final List<Error> errors = new ArrayList<>();
 
@@ -23,9 +33,72 @@ public class Args {
     private int currentArgument;
 
     public Args(String schema, String[] args) throws ParseException {
+        this.schemaArray = schema != null ? schema.replace(" ", "").split(",") : new String[0];
+        this.argsArgumentList = Arrays.stream(args).toList();
+
         this.schema = schema;
         this.argsArgument = args;
+
         parse();
+//        parseNew();
+    }
+
+    private void parseNew() throws ParseException {
+        if (schemaArray.length == 0 && argsArgumentList.isEmpty())
+            return;
+
+        validateSchema();
+
+        var argsKeysList = new ArrayList<Character>(List.of());
+        var argsKeys = argsArgumentList.stream().findFirst();
+        if (argsKeys.isPresent()) {
+            for (var i = 0; i < argsKeys.get().length(); i++) {
+                var currentKey = argsKeys.get().charAt(i);
+                if (currentKey != '-') {
+                    argsKeysList.add(currentKey);
+                }
+            }
+        }
+
+        var argumentsMap = new HashMap<Character, String>();
+        for (var i = 0; i < argsKeysList.size(); i++) {
+            var isValueMissing = argsArgumentList.size() <= i+1;
+            var value = isValueMissing ? null :  argsArgumentList.get(i+1);
+            argumentsMap.put(argsKeysList.get(i), value);
+        }
+
+        for (Map.Entry<Character, String> entry : argumentsMap.entrySet()) {
+            Character argKey = entry.getKey();
+            String argValue = entry.getValue();
+
+            var chainOfHandlers = new IntegerArgHandler(
+                    new StringArgHandler(
+                            new BooleanArgHandler(null)
+                    ));
+            try {
+                var element = chainOfHandlers.process(schemaArray, argKey, argValue);
+                argElements.put(argKey, element);
+                argsFound.add(argKey);
+            } catch (MissingArgumentException e) {
+                errors.add(new MissingArgError(argKey, e.getArgumentType()));
+            } catch (UnexpectedArgumentException e) {
+                errors.add(new UnexpectedArgError(argKey));
+            } catch (InvalidFormatArgumentException e) {
+                throw new ParseException(
+                        String.format("Argument: %c has invalid format: %s.",
+                                argKey, argValue), 0);
+            }
+        }
+    }
+
+    private void validateSchema() throws ParseException {
+        for (String element : schemaArray) {
+            if (element.length() > 0) {
+                char elementId = element.charAt(0);
+                validateSchemaElementId(elementId);
+                validateSchemaElementTail(element);
+            }
+        }
     }
 
     private void parse() throws ParseException {
@@ -67,6 +140,16 @@ public class Args {
         if (!Character.isLetter(elementId)) {
             throw new ParseException(
                     "Bad character:" + elementId + "in Args format: " + schema, 0);
+        }
+    }
+
+    private void validateSchemaElementTail(String element) throws ParseException {
+        var elementId = element.charAt(0);
+        var elementTail = element.length() == 2 ? String.valueOf(element.charAt(1)) : "";
+        if (!ArgumentFormats.isValidValue(elementTail)) {
+            throw new ParseException(
+                    String.format("Argument: %c has invalid format: %s.",
+                            elementId, elementTail), 0);
         }
     }
 
